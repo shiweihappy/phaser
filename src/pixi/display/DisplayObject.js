@@ -28,25 +28,6 @@ PIXI.DisplayObject = function()
     this.scale = new PIXI.Point(1, 1);
 
     /**
-     * The transform callback is an optional callback that if set will be called at the end of the updateTransform method and sent two parameters:
-     * This Display Objects worldTransform matrix and its parents transform matrix. Both are PIXI.Matrix object types.
-     * The matrix are passed by reference and can be modified directly without needing to return them.
-     * This ability allows you to check any of the matrix values and perform actions such as clamping scale or limiting rotation, regardless of the parent transforms.
-     * 
-     * @property transformCallback
-     * @type Function
-     */
-    this.transformCallback = null;
-
-    /**
-     * The context under which the transformCallback is invoked.
-     * 
-     * @property transformCallbackContext
-     * @type Object
-     */
-    this.transformCallbackContext = null;
-
-    /**
      * The pivot point of the displayObject that it rotates around
      *
      * @property pivot
@@ -259,8 +240,6 @@ PIXI.DisplayObject.prototype.destroy = function()
         this.children = [];
     }
 
-    this.transformCallback = null;
-    this.transformCallbackContext = null;
     this.hitArea = null;
     this.parent = null;
     this.stage = null;
@@ -327,8 +306,13 @@ Object.defineProperty(PIXI.DisplayObject.prototype, 'mask', {
 
 /**
  * Sets the filters for the displayObject.
- * * IMPORTANT: This is a webGL only feature and will be ignored by the canvas renderer.
- * To remove filters simply set this property to 'null'
+ * IMPORTANT: This is a webGL only feature and will be ignored by the Canvas renderer.
+ * 
+ * To remove filters simply set this property to 'null'.
+ * 
+ * You cannot have a filter and a multiply blend mode active at the same time. Setting a filter will reset
+ * this objects blend mode to NORMAL.
+ * 
  * @property filters
  * @type Array(Filter)
  */
@@ -360,6 +344,11 @@ Object.defineProperty(PIXI.DisplayObject.prototype, 'filters', {
         }
 
         this._filters = value;
+
+        if (this.blendMode && this.blendMode === PIXI.blendModes.MULTIPLY)
+        {
+            this.blendMode = PIXI.blendModes.NORMAL;
+        }
     }
 });
 
@@ -378,7 +367,10 @@ Object.defineProperty(PIXI.DisplayObject.prototype, 'cacheAsBitmap', {
 
     set: function(value) {
 
-        if (this._cacheAsBitmap === value) return;
+        if (this._cacheAsBitmap === value)
+        {
+            return;
+        }
 
         if (value)
         {
@@ -391,6 +383,7 @@ Object.defineProperty(PIXI.DisplayObject.prototype, 'cacheAsBitmap', {
 
         this._cacheAsBitmap = value;
     }
+
 });
 
 /*
@@ -648,29 +641,29 @@ PIXI.DisplayObject.prototype._generateCachedSprite = function()
 
     var bounds = this.getLocalBounds();
 
+    this.updateTransform();
+
     if (!this._cachedSprite)
     {
-        var renderTexture = new PIXI.RenderTexture(bounds.width | 0, bounds.height | 0);//, renderSession.renderer);
-
+        var renderTexture = new PIXI.RenderTexture(bounds.width | 1, bounds.height | 1);
         this._cachedSprite = new PIXI.Sprite(renderTexture);
         this._cachedSprite.worldTransform = this.worldTransform;
     }
     else
     {
-        this._cachedSprite.texture.resize(bounds.width | 0, bounds.height | 0);
+        this._cachedSprite.texture.resize(bounds.width | 1, bounds.height | 1);
     }
 
-    //REMOVE filter!
+    //  Remove filters
     var tempFilters = this._filters;
     this._filters = null;
-
     this._cachedSprite.filters = tempFilters;
 
+    // PIXI.DisplayObject._tempMatrix.identity();
     PIXI.DisplayObject._tempMatrix.tx = -bounds.x;
     PIXI.DisplayObject._tempMatrix.ty = -bounds.y;
-    
-    this._cachedSprite.texture.render(this, PIXI.DisplayObject._tempMatrix, true);
 
+    this._cachedSprite.texture.render(this, PIXI.DisplayObject._tempMatrix, true);
     this._cachedSprite.anchor.x = -( bounds.x / bounds.width );
     this._cachedSprite.anchor.y = -( bounds.y / bounds.height );
 

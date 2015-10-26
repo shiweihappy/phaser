@@ -52,10 +52,10 @@
     <script src="$path/src/pixi/display/DisplayObjectContainer.js"></script>
     <script src="$path/src/pixi/display/Sprite.js"></script>
     <script src="$path/src/pixi/display/SpriteBatch.js"></script>
-    <script src="$path/src/pixi/display/Stage.js"></script>
 
     <script src="$path/src/pixi/utils/Utils.js"></script>
     <script src="$path/src/pixi/utils/Polyk.js"></script>
+    <script src="$path/src/pixi/utils/CanvasPool.js"></script>
 
     <script src="$path/src/pixi/renderers/webgl/utils/WebGLShaderUtils.js"></script>
     <script src="$path/src/pixi/renderers/webgl/shaders/PixiShader.js"></script>
@@ -73,6 +73,7 @@
     <script src="$path/src/pixi/renderers/webgl/utils/WebGLFastSpriteBatch.js"></script>
     <script src="$path/src/pixi/renderers/webgl/utils/WebGLFilterManager.js"></script>
     <script src="$path/src/pixi/renderers/webgl/utils/FilterTexture.js"></script>
+
     <script src="$path/src/pixi/renderers/canvas/utils/CanvasBuffer.js"></script>
     <script src="$path/src/pixi/renderers/canvas/utils/CanvasMaskManager.js"></script>
     <script src="$path/src/pixi/renderers/canvas/utils/CanvasTinter.js"></script>

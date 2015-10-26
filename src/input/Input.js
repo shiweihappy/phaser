@@ -374,7 +374,7 @@ Phaser.Input.prototype = {
     */
     boot: function () {
 
-        this.mousePointer = new Phaser.Pointer(this.game, 0);
+        this.mousePointer = new Phaser.Pointer(this.game, 0, Phaser.PointerMode.CURSOR);
         this.addPointer();
         this.addPointer();
 
@@ -406,9 +406,7 @@ Phaser.Input.prototype = {
 
         this.activePointer = this.mousePointer;
 
-        this.hitCanvas = document.createElement('canvas');
-        this.hitCanvas.width = 1;
-        this.hitCanvas.height = 1;
+        this.hitCanvas = PIXI.CanvasPool.create(this, 1, 1);
         this.hitContext = this.hitCanvas.getContext('2d');
 
         this.mouse.start();
@@ -453,6 +451,8 @@ Phaser.Input.prototype = {
         }
 
         this.moveCallbacks = [];
+
+        PIXI.CanvasPool.remove(this);
 
         this.game.canvas.removeEventListener('click', this._onClickTrampoline);
 
@@ -517,7 +517,7 @@ Phaser.Input.prototype = {
         }
 
         var id = this.pointers.length + 1;
-        var pointer = new Phaser.Pointer(this.game, id);
+        var pointer = new Phaser.Pointer(this.game, id, Phaser.PointerMode.TOUCH);
 
         this.pointers.push(pointer);
         this['pointer' + id] = pointer;

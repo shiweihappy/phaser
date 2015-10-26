@@ -40,7 +40,16 @@ Phaser.Text = function (game, x, y, text, style) {
 
     x = x || 0;
     y = y || 0;
-    text = text.toString() || '';
+
+    if (text === undefined || text === null)
+    {
+        text = '';
+    }
+    else
+    {
+        text = text.toString();
+    }
+
     style = style || {};
 
     /**
@@ -73,7 +82,7 @@ Phaser.Text = function (game, x, y, text, style) {
     /**
      * @property {HTMLCanvasElement} canvas - The canvas element that the text is rendered.
      */
-    this.canvas = document.createElement('canvas');
+    this.canvas = PIXI.CanvasPool.create(this);
 
     /**
      * @property {HTMLCanvasElement} context - The context of the canvas element that the text is rendered to.
@@ -89,6 +98,16 @@ Phaser.Text = function (game, x, y, text, style) {
     * @property {array} strokeColors - An array of the stroke color values as specified by {@link Phaser.Text#addStrokeColor addStrokeColor}.
     */
     this.strokeColors = [];
+
+    /**
+    * @property {array} fontStyles - An array of the font styles values as specified by {@link Phaser.Text#addFontStyle addFontStyle}.
+    */
+    this.fontStyles = [];
+
+    /**
+    * @property {array} fontWeights - An array of the font weights values as specified by {@link Phaser.Text#addFontWeight addFontWeight}.
+    */
+    this.fontWeights = [];
 
     /**
     * Should the linePositionX and Y values be automatically rounded before rendering the Text?
@@ -191,15 +210,7 @@ Phaser.Text.prototype.destroy = function (destroyChildren) {
 
     this.texture.destroy(true);
 
-    if (this.canvas && this.canvas.parentNode)
-    {
-        this.canvas.parentNode.removeChild(this.canvas);
-    }
-    else
-    {
-        this.canvas = null;
-        this.context = null;
-    }
+    PIXI.CanvasPool.remove(this);
 
     Phaser.Component.Destroy.prototype.destroy.call(this, destroyChildren);
 
@@ -353,6 +364,12 @@ Phaser.Text.prototype.updateText = function () {
         {
             //  Simple layout (no tabs)
             var lineWidth = this.context.measureText(lines[i]).width + this.style.strokeThickness + this.padding.x;
+
+            // Adjust for wrapped text
+            if (this.style.wordWrap)
+            {
+                lineWidth -= this.context.measureText(' ').width;
+            }
         }
         else
         {
@@ -394,9 +411,7 @@ Phaser.Text.prototype.updateText = function () {
         maxLineWidth = Math.max(maxLineWidth, lineWidths[i]);
     }
 
-    var width = maxLineWidth + this.style.strokeThickness;
-
-    this.canvas.width = width * this._res;
+    this.canvas.width = maxLineWidth * this._res;
     
     //  Calculate text height
     var lineHeight = fontProperties.fontSize + this.style.strokeThickness + this.padding.y;
@@ -472,7 +487,7 @@ Phaser.Text.prototype.updateText = function () {
             linePositionY = Math.round(linePositionY);
         }
 
-        if (this.colors.length > 0 || this.strokeColors.length > 0)
+        if (this.colors.length > 0 || this.strokeColors.length > 0 || this.fontWeights.length > 0 || this.fontStyles.length > 0)
         {
             this.updateLine(lines[i], linePositionX, linePositionY);
         }
@@ -603,7 +618,7 @@ Phaser.Text.prototype.updateShadow = function (state) {
 };
 
 /**
-* Updates a line of text, applying fill and stroke per-character colors if applicable.
+* Updates a line of text, applying fill and stroke per-character colors or style and weight per-character font if applicable.
 *
 * @method Phaser.Text#updateLine
 * @private
@@ -613,6 +628,23 @@ Phaser.Text.prototype.updateLine = function (line, x, y) {
     for (var i = 0; i < line.length; i++)
     {
         var letter = line[i];
+
+        if (this.fontWeights.length > 0 || this.fontStyles.length > 0)
+        {
+            var components = this.fontToComponents(this.context.font);
+
+            if (this.fontStyles[this._charCount])
+            {
+                components.fontStyle = this.fontStyles[this._charCount];
+            }
+        
+            if (this.fontWeights[this._charCount])
+            {
+                components.fontWeight = this.fontWeights[this._charCount];
+            }
+      
+            this.context.font = this.componentsToFont(components);
+        }
 
         if (this.style.stroke && this.style.strokeThickness)
         {
@@ -653,6 +685,22 @@ Phaser.Text.prototype.clearColors = function () {
 
     this.colors = [];
     this.strokeColors = [];
+    this.dirty = true;
+
+    return this;
+
+};
+
+/**
+* Clears any text styles or weights font that were set by `addFontStyle` or `addFontWeight`.
+*
+* @method Phaser.Text#clearFontValues
+* @return {Phaser.Text} This Text instance.
+*/
+Phaser.Text.prototype.clearFontValues = function () {
+
+    this.fontStyles = [];
+    this.fontWeights = [];
     this.dirty = true;
 
     return this;
@@ -703,6 +751,54 @@ Phaser.Text.prototype.addColor = function (color, position) {
 Phaser.Text.prototype.addStrokeColor = function (color, position) {
 
     this.strokeColors[position] = color;
+    this.dirty = true;
+
+    return this;
+
+};
+
+/**
+* Set specific font styles for certain characters within the Text.
+*
+* It works by taking a font style value, which is a typical string such as `normal`, `italic` or `oblique`.
+* The position value is the index of the character in the Text string to start applying this font style to.
+* Once set the font style remains in use until either another font style or the end of the string is encountered.
+* For example if the Text was `Photon Storm` and you did `Text.addFontStyle('italic', 6)` it would font style in the word `Storm` in italic.
+*
+* If you wish to change the text font weight see addFontWeight instead.
+*
+* @method Phaser.Text#addFontStyle
+* @param {string} style - A canvas font-style that will be used on the text style eg `normal`, `italic`, `oblique`.
+* @param {number} position - The index of the character in the string to start applying this font style value from.
+* @return {Phaser.Text} This Text instance.
+*/
+Phaser.Text.prototype.addFontStyle = function (style, position) {
+
+    this.fontStyles[position] = style;
+    this.dirty = true;
+
+    return this;
+
+};
+
+/**
+* Set specific font weights for certain characters within the Text.
+*
+* It works by taking a font weight value, which is a typical string such as `normal`, `bold`, `bolder`, etc.
+* The position value is the index of the character in the Text string to start applying this font weight to.
+* Once set the font weight remains in use until either another font weight or the end of the string is encountered.
+* For example if the Text was `Photon Storm` and you did `Text.addFontWeight('bold', 6)` it would font weight in the word `Storm` in bold.
+*
+* If you wish to change the text font style see addFontStyle instead.
+*
+* @method Phaser.Text#addFontWeight
+* @param {string} style - A canvas font-weight that will be used on the text weight eg `normal`, `bold`, `bolder`, `lighter`, etc.
+* @param {number} position - The index of the character in the string to start applying this font weight value from.
+* @return {Phaser.Text} This Text instance.
+*/
+Phaser.Text.prototype.addFontWeight = function (weight, position) {
+
+    this.fontWeights[position] = weight;
     this.dirty = true;
 
     return this;
@@ -1036,20 +1132,20 @@ Phaser.Text.prototype.updateTexture = function () {
         //  Align the canvas based on the bounds
         if (this.style.boundsAlignH === 'right')
         {
-            x = this.textBounds.width - this.canvas.width;
+            x += this.textBounds.width - this.canvas.width;
         }
         else if (this.style.boundsAlignH === 'center')
         {
-            x = this.textBounds.halfWidth - (this.canvas.width / 2);
+            x += this.textBounds.halfWidth - (this.canvas.width / 2);
         }
 
         if (this.style.boundsAlignV === 'bottom')
         {
-            y = this.textBounds.height - this.canvas.height;
+            y += this.textBounds.height - this.canvas.height;
         }
         else if (this.style.boundsAlignV === 'middle')
         {
-            y = this.textBounds.halfHeight - (this.canvas.height / 2);
+            y += this.textBounds.halfHeight - (this.canvas.height / 2);
         }
 
         this.pivot.x = -x;
@@ -1058,6 +1154,8 @@ Phaser.Text.prototype.updateTexture = function () {
 
     //  Can't render something with a zero sized dimension
     this.renderable = (w !== 0 && h !== 0);
+
+    this.texture.requiresReTint = true;
 
     this.texture.baseTexture.dirty();
 
@@ -1880,5 +1978,5 @@ Object.defineProperty(Phaser.Text.prototype, 'height', {
 
 Phaser.Text.fontPropertiesCache = {};
 
-Phaser.Text.fontPropertiesCanvas = document.createElement('canvas');
+Phaser.Text.fontPropertiesCanvas = PIXI.CanvasPool.create(Phaser.Text.fontPropertiesCanvas);
 Phaser.Text.fontPropertiesContext = Phaser.Text.fontPropertiesCanvas.getContext('2d');

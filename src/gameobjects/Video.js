@@ -352,7 +352,14 @@ Phaser.Video.prototype = {
 
         if (this.videoStream !== null)
         {
-            this.videoStream.stop();
+            if (this.videoStream['active'])
+            {
+                this.videoStream.active = false;
+            }
+            else
+            {
+                this.videoStream.stop();
+            }
         }
 
         this.removeVideoElement();
@@ -731,7 +738,15 @@ Phaser.Video.prototype = {
             else
             {
                 this.video.src = "";
-                this.videoStream.stop();
+
+                if (this.videoStream['active'])
+                {
+                    this.videoStream.active = false;
+                }
+                else
+                {
+                    this.videoStream.stop();
+                }
             }
 
             this.videoStream = null;
@@ -739,7 +754,8 @@ Phaser.Video.prototype = {
         }
         else
         {
-            this.video.removeEventListener('ended', this.complete.bind(this));
+            this.video.removeEventListener('ended', this.complete.bind(this), true);
+            this.video.removeEventListener('playing', this.playHandler.bind(this), true);
 
             if (this.touchLocked)
             {

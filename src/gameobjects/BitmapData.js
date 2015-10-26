@@ -45,7 +45,8 @@ Phaser.BitmapData = function (game, key, width, height) {
     * @property {HTMLCanvasElement} canvas - The canvas to which this BitmapData draws.
     * @default
     */
-    this.canvas = Phaser.Canvas.create(width, height, '', true);
+    // this.canvas = Phaser.Canvas.create(width, height, '', true);
+    this.canvas = PIXI.CanvasPool.create(this, width, height);
 
     /**
     * @property {CanvasRenderingContext2D} context - The 2d context of the canvas.
@@ -60,6 +61,8 @@ Phaser.BitmapData = function (game, key, width, height) {
 
     /**
     * @property {ImageData} imageData - The context image data.
+    * Please note that a call to BitmapData.draw() or BitmapData.copy() does not update immediately this property for performance reason. Use BitmapData.update() to do so.
+    * This property is updated automatically after the first game loop, according to the dirty flag property.
     */
     this.imageData = this.context.getImageData(0, 0, width, height);
 
@@ -213,7 +216,7 @@ Phaser.BitmapData = function (game, key, width, height) {
     * @property {HTMLCanvasElement} _swapCanvas - A swap canvas.
     * @private
     */
-    this._swapCanvas = Phaser.Canvas.create(width, height, '', true);
+    this._swapCanvas = PIXI.CanvasPool.create(this, width, height);
 
 };
 
@@ -222,23 +225,24 @@ Phaser.BitmapData.prototype = {
     /**
     * Shifts the contents of this BitmapData by the distances given.
     * 
-    * The image will wrap-around the edges on all sides.
+    * The image will wrap-around the edges on all sides if the wrap argument is true (the default).
     *
     * @method Phaser.BitmapData#move
     * @param {integer} x - The amount of pixels to horizontally shift the canvas by. Use a negative value to shift to the left, positive to the right.
     * @param {integer} y - The amount of pixels to vertically shift the canvas by. Use a negative value to shift up, positive to shift down.
+    * @param {boolean} [wrap=true] - Wrap the content of the BitmapData.
     * @return {Phaser.BitmapData} This BitmapData object for method chaining.
     */
-    move: function (x, y) {
+    move: function (x, y, wrap) {
 
         if (x !== 0)
         {
-            this.moveH(x);
+            this.moveH(x, wrap);
         }
 
         if (y !== 0)
         {
-            this.moveV(y);
+            this.moveV(y, wrap);
         }
 
         return this;
@@ -248,13 +252,16 @@ Phaser.BitmapData.prototype = {
     /**
     * Shifts the contents of this BitmapData horizontally.
     * 
-    * The image will wrap-around the sides.
+    * The image will wrap-around the sides if the wrap argument is true (the default).
     *
     * @method Phaser.BitmapData#moveH
     * @param {integer} distance - The amount of pixels to horizontally shift the canvas by. Use a negative value to shift to the left, positive to the right.
+    * @param {boolean} [wrap=true] - Wrap the content of the BitmapData.
     * @return {Phaser.BitmapData} This BitmapData object for method chaining.
     */
-    moveH: function (distance) {
+    moveH: function (distance, wrap) {
+
+        if (wrap === undefined) { wrap = true; }
 
         var c = this._swapCanvas;
         var ctx = c.getContext('2d');
@@ -271,7 +278,10 @@ Phaser.BitmapData.prototype = {
             var w = this.width - distance;
 
             //  Left-hand chunk
-            ctx.drawImage(src, 0, 0, distance, h, w, 0, distance, h);
+            if (wrap)
+            {
+                ctx.drawImage(src, 0, 0, distance, h, w, 0, distance, h);
+            }
 
             //  Rest of the image
             ctx.drawImage(src, distance, 0, w, h, 0, 0, w, h);
@@ -282,7 +292,10 @@ Phaser.BitmapData.prototype = {
             var w = this.width - distance;
 
             //  Right-hand chunk
-            ctx.drawImage(src, w, 0, distance, h, 0, 0, distance, h);
+            if (wrap)
+            {
+                ctx.drawImage(src, w, 0, distance, h, 0, 0, distance, h);
+            }
 
             //  Rest of the image
             ctx.drawImage(src, 0, 0, w, h, distance, 0, w, h);
@@ -297,13 +310,16 @@ Phaser.BitmapData.prototype = {
     /**
     * Shifts the contents of this BitmapData vertically.
     * 
-    * The image will wrap-around the sides.
+    * The image will wrap-around the sides if the wrap argument is true (the default).
     *
     * @method Phaser.BitmapData#moveV
     * @param {integer} distance - The amount of pixels to vertically shift the canvas by. Use a negative value to shift up, positive to shift down.
+    * @param {boolean} [wrap=true] - Wrap the content of the BitmapData.
     * @return {Phaser.BitmapData} This BitmapData object for method chaining.
     */
-    moveV: function (distance) {
+    moveV: function (distance, wrap) {
+
+        if (wrap === undefined) { wrap = true; }
 
         var c = this._swapCanvas;
         var ctx = c.getContext('2d');
@@ -320,7 +336,10 @@ Phaser.BitmapData.prototype = {
             var h = this.height - distance;
 
             //  Top chunk
-            ctx.drawImage(src, 0, 0, w, distance, 0, h, w, distance);
+            if (wrap)
+            {
+                ctx.drawImage(src, 0, 0, w, distance, 0, h, w, distance);
+            }
 
             //  Rest of the image
             ctx.drawImage(src, 0, distance, w, h, 0, 0, w, h);
@@ -331,7 +350,10 @@ Phaser.BitmapData.prototype = {
             var h = this.height - distance;
 
             //  Bottom chunk
-            ctx.drawImage(src, 0, h, w, distance, 0, 0, w, distance);
+            if (wrap)
+            {
+                ctx.drawImage(src, 0, h, w, distance, 0, 0, w, distance);
+            }
 
             //  Rest of the image
             ctx.drawImage(src, 0, 0, w, h, 0, distance, w, h);
@@ -434,6 +456,8 @@ Phaser.BitmapData.prototype = {
         if (height === undefined) { height = this.height; }
 
         this.context.clearRect(x, y, width, height);
+
+        this.update();
 
         this.dirty = true;
 
@@ -916,7 +940,6 @@ Phaser.BitmapData.prototype = {
     * @param {number} red - The red color value, between 0 and 0xFF (255).
     * @param {number} green - The green color value, between 0 and 0xFF (255).
     * @param {number} blue - The blue color value, between 0 and 0xFF (255).
-    * @param {number} alpha - The alpha color value, between 0 and 0xFF (255).
     * @param {boolean} [immediate=true] - If `true` the context.putImageData will be called and the dirty flag set.
     * @return {Phaser.BitmapData} This BitmapData object for method chaining.
     */
@@ -1181,7 +1204,7 @@ Phaser.BitmapData.prototype = {
 
         this._image = source;
 
-        if (source instanceof Phaser.Sprite || source instanceof Phaser.Image || source instanceof Phaser.Text)
+        if (source instanceof Phaser.Sprite || source instanceof Phaser.Image || source instanceof Phaser.Text || source instanceof PIXI.Sprite)
         {
             //  Copy over sprite values
             this._pos.set(source.texture.crop.x, source.texture.crop.y);
@@ -1307,15 +1330,17 @@ Phaser.BitmapData.prototype = {
             return;
         }
 
-        this._alpha.prev = this.context.globalAlpha;
+        var ctx = this.context;
 
-        this.context.save();
+        this._alpha.prev = ctx.globalAlpha;
 
-        this.context.globalAlpha = this._alpha.current;
+        ctx.save();
+
+        ctx.globalAlpha = this._alpha.current;
 
         if (blendMode)
         {
-            this.context.globalCompositeOperation = blendMode;
+            this.op = blendMode;
         }
 
         if (roundPx)
@@ -1324,17 +1349,17 @@ Phaser.BitmapData.prototype = {
             ty |= 0;
         }
 
-        this.context.translate(tx, ty);
+        ctx.translate(tx, ty);
 
-        this.context.scale(this._scale.x, this._scale.y);
+        ctx.scale(this._scale.x, this._scale.y);
 
-        this.context.rotate(this._rotate);
+        ctx.rotate(this._rotate);
 
-        this.context.drawImage(this._image, this._pos.x + x, this._pos.y + y, this._size.x, this._size.y, -newWidth * this._anchor.x, -newHeight * this._anchor.y, newWidth, newHeight);
+        ctx.drawImage(this._image, this._pos.x + x, this._pos.y + y, this._size.x, this._size.y, -newWidth * this._anchor.x, -newHeight * this._anchor.y, newWidth, newHeight);
 
-        this.context.restore();
+        ctx.restore();
 
-        this.context.globalAlpha = this._alpha.prev;
+        ctx.globalAlpha = this._alpha.prev;
 
         this.dirty = true;
 
@@ -1408,6 +1433,64 @@ Phaser.BitmapData.prototype = {
     },
 
     /**
+    * Draws the Game Object or Group to this BitmapData and then recursively iterates through all of its children.
+    * 
+    * If a child has an `exists` property then it (and its children) will be only be drawn if exists is `true`.
+    * 
+    * The children will be drawn at their `x` and `y` world space coordinates. If this is outside the bounds of the BitmapData 
+    * they won't be drawn. Depending on your requirements you may need to resize the BitmapData in advance to match the 
+    * bounds of the top-level Game Object.
+    * 
+    * When drawing it will take into account the child's world rotation, scale and alpha values.
+    *
+    * It's perfectly valid to pass in `game.world` as the parent object, and it will iterate through the entire display list.
+    * 
+    * Note: If you are trying to grab your entire game at the start of a State then you should ensure that at least 1 full update
+    * has taken place before doing so, otherwise all of the objects will render with incorrect positions and scales. You can 
+    * trigger an update yourself by calling `stage.updateTransform()` before calling `drawFull`.
+    *
+    * @method Phaser.BitmapData#drawFull
+    * @param {Phaser.World|Phaser.Group|Phaser.Sprite|Phaser.Image|Phaser.Text|Phaser.BitmapText} parent - The Game Object to draw onto this BitmapData and then recursively draw all of its children.
+    * @param {string} [blendMode=null] - The composite blend mode that will be used when drawing. The default is no blend mode at all. This is a Canvas globalCompositeOperation value such as 'lighter' or 'xor'.
+    * @param {boolean} [roundPx=false] - Should the x and y values be rounded to integers before drawing? This prevents anti-aliasing in some instances.
+    * @return {Phaser.BitmapData} This BitmapData object for method chaining.
+    */
+    drawFull: function (parent, blendMode, roundPx) {
+
+        if (parent.worldVisible === false || parent.worldAlpha === 0 || (parent.hasOwnProperty('exists') && parent.exists === false))
+        {
+            return this;
+        }
+
+        if (parent.type !== Phaser.GROUP && parent.type !== Phaser.EMITTER && parent.type !== Phaser.BITMAPTEXT)
+        {
+            if (parent.type === Phaser.GRAPHICS)
+            {
+                var bounds = parent.getBounds();
+                this.ctx.save();
+                this.ctx.translate(bounds.x, bounds.y);
+                PIXI.CanvasGraphics.renderGraphics(parent, this.ctx);
+                this.ctx.restore();
+            }
+            else
+            {
+                this.copy(parent, null, null, null, null, parent.worldPosition.x, parent.worldPosition.y, null, null, parent.worldRotation, null, null, parent.worldScale.x, parent.worldScale.y, parent.worldAlpha, blendMode, roundPx);
+            }
+        }
+
+        if (parent.children)
+        {
+            for (var i = 0; i < parent.children.length; i++)
+            {
+                this.drawFull(parent.children[i], blendMode, roundPx);
+            }
+        }
+
+        return this;
+
+    },
+
+    /**
     * Sets the shadow properties of this BitmapDatas context which will affect all draw operations made to it.
     * You can cancel an existing shadow by calling this method and passing no parameters.
     * Note: At the time of writing (October 2014) Chrome still doesn't support shadowBlur used with drawImage.
@@ -1421,16 +1504,18 @@ Phaser.BitmapData.prototype = {
     */
     shadow: function (color, blur, x, y) {
 
+        var ctx = this.context;
+
         if (color === undefined || color === null)
         {
-            this.context.shadowColor = 'rgba(0,0,0,0)';
+            ctx.shadowColor = 'rgba(0,0,0,0)';
         }
         else
         {
-            this.context.shadowColor = color;
-            this.context.shadowBlur = blur || 5;
-            this.context.shadowOffsetX = x || 10;
-            this.context.shadowOffsetY = y || 10;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = blur || 5;
+            ctx.shadowOffsetX = x || 10;
+            ctx.shadowOffsetY = y || 10;
         }
 
     },
@@ -1568,20 +1653,21 @@ Phaser.BitmapData.prototype = {
         if (color === undefined) { color = 'rgb(255,255,255)'; }
         if (shadow === undefined) { shadow = true; }
 
-        var prevFont = this.context.font;
+        var ctx = this.context;
+        var prevFont = ctx.font;
 
-        this.context.font = font;
+        ctx.font = font;
 
         if (shadow)
         {
-            this.context.fillStyle = 'rgb(0,0,0)';
-            this.context.fillText(text, x + 1, y + 1);
+            ctx.fillStyle = 'rgb(0,0,0)';
+            ctx.fillText(text, x + 1, y + 1);
         }
         
-        this.context.fillStyle = color;
-        this.context.fillText(text, x, y);
+        ctx.fillStyle = color;
+        ctx.fillText(text, x, y);
 
-        this.context.font = prevFont;
+        ctx.font = prevFont;
 
     },
 
@@ -1597,16 +1683,52 @@ Phaser.BitmapData.prototype = {
     */
     circle: function (x, y, radius, fillStyle) {
 
-        if (typeof fillStyle !== 'undefined')
+        var ctx = this.context;
+
+        if (fillStyle !== undefined)
         {
-            this.context.fillStyle = fillStyle;
+            ctx.fillStyle = fillStyle;
         }
 
-        this.context.beginPath();
-        this.context.arc(x, y, radius, 0, Math.PI * 2, false);
-        this.context.closePath();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+        ctx.closePath();
 
-        this.context.fill();
+        ctx.fill();
+
+        return this;
+
+    },
+
+    /**
+    * Draws a line between the coordinates given in the color and thickness specified.
+    *
+    * @method Phaser.BitmapData#line
+    * @param {number} x1 - The x coordinate to start the line from.
+    * @param {number} y1 - The y coordinate to start the line from.
+    * @param {number} x2 - The x coordinate to draw the line to.
+    * @param {number} y2 - The y coordinate to draw the line to.
+    * @param {string} [color='#fff'] - The stroke color that the line will be drawn in.
+    * @param {number} [width=1] - The line thickness.
+    * @return {Phaser.BitmapData} This BitmapData object for method chaining.
+    */
+    line: function (x1, y1, x2, y2, color, width) {
+
+        if (color === undefined) { color = '#fff'; }
+        if (width === undefined) { width = 1; }
+
+        var ctx = this.context;
+
+        ctx.beginPath();
+
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+
+        ctx.lineWidth = width;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+
+        ctx.closePath();
 
         return this;
 
@@ -1642,17 +1764,19 @@ Phaser.BitmapData.prototype = {
             width = image.width;
         }
 
-        this.context.fillStyle = this.context.createPattern(image, repeat);
+        var ctx = this.context;
+
+        ctx.fillStyle = ctx.createPattern(image, repeat);
 
         this._circle = new Phaser.Circle(line.start.x, line.start.y, image.height);
 
         this._circle.circumferencePoint(line.angle - 1.5707963267948966, false, this._pos);
 
-        this.context.save();
-        this.context.translate(this._pos.x, this._pos.y);
-        this.context.rotate(line.angle);
-        this.context.fillRect(0, 0, width, image.height);
-        this.context.restore();
+        ctx.save();
+        ctx.translate(this._pos.x, this._pos.y);
+        ctx.rotate(line.angle);
+        ctx.fillRect(0, 0, width, image.height);
+        ctx.restore();
 
         this.dirty = true;
 
@@ -1681,6 +1805,17 @@ Phaser.BitmapData.prototype = {
     },
 
     /**
+    * Destroys this BitmapData and puts the canvas it was using back into the canvas pool for re-use.
+    *
+    * @method Phaser.BitmapData#destroy
+    */
+    destroy: function () {
+
+        PIXI.CanvasPool.remove(this);
+
+    },
+
+    /**
     * Resets the blend mode (effectively sets it to 'source-over')
     *
     * @method Phaser.BitmapData#blendReset
@@ -1688,7 +1823,7 @@ Phaser.BitmapData.prototype = {
     */
     blendReset: function () {
 
-        this.context.globalCompositeOperation = 'source-over';
+        this.op = 'source-over';
         return this;
 
     },
@@ -1701,7 +1836,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSourceOver: function () {
 
-        this.context.globalCompositeOperation = 'source-over';
+        this.op = 'source-over';
         return this;
 
     },
@@ -1714,7 +1849,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSourceIn: function () {
 
-        this.context.globalCompositeOperation = 'source-in';
+        this.op = 'source-in';
         return this;
 
     },
@@ -1727,7 +1862,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSourceOut: function () {
 
-        this.context.globalCompositeOperation = 'source-out';
+        this.op = 'source-out';
         return this;
 
     },
@@ -1740,7 +1875,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSourceAtop: function () {
 
-        this.context.globalCompositeOperation = 'source-atop';
+        this.op = 'source-atop';
         return this;
 
     },
@@ -1753,7 +1888,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDestinationOver: function () {
 
-        this.context.globalCompositeOperation = 'destination-over';
+        this.op = 'destination-over';
         return this;
 
     },
@@ -1766,7 +1901,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDestinationIn: function () {
 
-        this.context.globalCompositeOperation = 'destination-in';
+        this.op = 'destination-in';
         return this;
 
     },
@@ -1779,7 +1914,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDestinationOut: function () {
 
-        this.context.globalCompositeOperation = 'destination-out';
+        this.op = 'destination-out';
         return this;
 
     },
@@ -1792,7 +1927,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDestinationAtop: function () {
 
-        this.context.globalCompositeOperation = 'destination-atop';
+        this.op = 'destination-atop';
         return this;
 
     },
@@ -1805,7 +1940,7 @@ Phaser.BitmapData.prototype = {
     */
     blendXor: function () {
 
-        this.context.globalCompositeOperation = 'xor';
+        this.op = 'xor';
         return this;
 
     },
@@ -1818,7 +1953,7 @@ Phaser.BitmapData.prototype = {
     */
     blendAdd: function () {
 
-        this.context.globalCompositeOperation = 'lighter';
+        this.op = 'lighter';
         return this;
 
     },
@@ -1831,7 +1966,7 @@ Phaser.BitmapData.prototype = {
     */
     blendMultiply: function () {
 
-        this.context.globalCompositeOperation = 'multiply';
+        this.op = 'multiply';
         return this;
 
     },
@@ -1844,7 +1979,7 @@ Phaser.BitmapData.prototype = {
     */
     blendScreen: function () {
 
-        this.context.globalCompositeOperation = 'screen';
+        this.op = 'screen';
         return this;
 
     },
@@ -1857,7 +1992,7 @@ Phaser.BitmapData.prototype = {
     */
     blendOverlay: function () {
 
-        this.context.globalCompositeOperation = 'overlay';
+        this.op = 'overlay';
         return this;
 
     },
@@ -1870,7 +2005,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDarken: function () {
 
-        this.context.globalCompositeOperation = 'darken';
+        this.op = 'darken';
         return this;
 
     },
@@ -1883,7 +2018,7 @@ Phaser.BitmapData.prototype = {
     */
     blendLighten: function () {
 
-        this.context.globalCompositeOperation = 'lighten';
+        this.op = 'lighten';
         return this;
 
     },
@@ -1896,7 +2031,7 @@ Phaser.BitmapData.prototype = {
     */
     blendColorDodge: function () {
 
-        this.context.globalCompositeOperation = 'color-dodge';
+        this.op = 'color-dodge';
         return this;
 
     },
@@ -1909,7 +2044,7 @@ Phaser.BitmapData.prototype = {
     */
     blendColorBurn: function () {
 
-        this.context.globalCompositeOperation = 'color-burn';
+        this.op = 'color-burn';
         return this;
 
     },
@@ -1922,7 +2057,7 @@ Phaser.BitmapData.prototype = {
     */
     blendHardLight: function () {
 
-        this.context.globalCompositeOperation = 'hard-light';
+        this.op = 'hard-light';
         return this;
 
     },
@@ -1935,7 +2070,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSoftLight: function () {
 
-        this.context.globalCompositeOperation = 'soft-light';
+        this.op = 'soft-light';
         return this;
 
     },
@@ -1948,7 +2083,7 @@ Phaser.BitmapData.prototype = {
     */
     blendDifference: function () {
 
-        this.context.globalCompositeOperation = 'difference';
+        this.op = 'difference';
         return this;
 
     },
@@ -1961,7 +2096,7 @@ Phaser.BitmapData.prototype = {
     */
     blendExclusion: function () {
 
-        this.context.globalCompositeOperation = 'exclusion';
+        this.op = 'exclusion';
         return this;
 
     },
@@ -1974,7 +2109,7 @@ Phaser.BitmapData.prototype = {
     */
     blendHue: function () {
 
-        this.context.globalCompositeOperation = 'hue';
+        this.op = 'hue';
         return this;
 
     },
@@ -1987,7 +2122,7 @@ Phaser.BitmapData.prototype = {
     */
     blendSaturation: function () {
 
-        this.context.globalCompositeOperation = 'saturation';
+        this.op = 'saturation';
         return this;
 
     },
@@ -2000,7 +2135,7 @@ Phaser.BitmapData.prototype = {
     */
     blendColor: function () {
 
-        this.context.globalCompositeOperation = 'color';
+        this.op = 'color';
         return this;
 
     },
@@ -2013,7 +2148,7 @@ Phaser.BitmapData.prototype = {
     */
     blendLuminosity: function () {
 
-        this.context.globalCompositeOperation = 'luminosity';
+        this.op = 'luminosity';
         return this;
 
     }
@@ -2035,6 +2170,26 @@ Object.defineProperty(Phaser.BitmapData.prototype, "smoothed", {
     set: function (value) {
 
         Phaser.Canvas.setSmoothingEnabled(this.context, value);
+
+    }
+
+});
+
+/**
+* @memberof Phaser.BitmapData
+* @property {string} op - A short-hand code to get or set the global composite operation of the BitmapDatas canvas.
+*/
+Object.defineProperty(Phaser.BitmapData.prototype, "op", {
+
+    get: function () {
+
+        return this.context.globalCompositeOperation;
+
+    },
+
+    set: function (value) {
+
+        this.context.globalCompositeOperation = value;
 
     }
 

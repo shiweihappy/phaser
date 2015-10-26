@@ -438,7 +438,7 @@ Phaser.InputHandler.prototype = {
 
         if (includePixelPerfect === undefined) { includePixelPerfect = true; }
 
-        if (this.sprite.scale.x === 0 || this.sprite.scale.y === 0 || this.priorityID < this.game.input.minPriorityID)
+        if (!this.enabled || this.sprite.scale.x === 0 || this.sprite.scale.y === 0 || this.priorityID < this.game.input.minPriorityID)
         {
             return false;
         }
@@ -475,14 +475,14 @@ Phaser.InputHandler.prototype = {
     * This value is only set when the pointer is over this Sprite.
     *
     * @method Phaser.InputHandler#pointerX
-    * @param {number} pointer - The index of the pointer to check. You can get this from Phaser.Pointer.id.
+    * @param {integer} [pointerId=0]
     * @return {number} The x coordinate of the Input pointer.
     */
-    pointerX: function (pointer) {
+    pointerX: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].x;
+        return this._pointerData[pointerId].x;
 
     },
 
@@ -491,44 +491,46 @@ Phaser.InputHandler.prototype = {
     * This value is only set when the pointer is over this Sprite.
     *
     * @method Phaser.InputHandler#pointerY
-    * @param {number} pointer - The index of the pointer to check. You can get this from Phaser.Pointer.id.
+    * @param {integer} [pointerId=0]
     * @return {number} The y coordinate of the Input pointer.
     */
-    pointerY: function (pointer) {
+    pointerY: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].y;
+        return this._pointerData[pointerId].y;
 
     },
 
     /**
-    * If the Pointer is down this returns true. Please note that it only checks if the Pointer is down, not if it's down over any specific Sprite.
+    * If the Pointer is down this returns true.
+    * This *only* checks if the Pointer is down, not if it's down over any specific Sprite.
     *
     * @method Phaser.InputHandler#pointerDown
-    * @param {number} pointer - The index of the pointer to check. You can get this from Phaser.Pointer.id.
+    * @param {integer} [pointerId=0]
     * @return {boolean} - True if the given pointer is down, otherwise false.
     */
-    pointerDown: function (pointer) {
+    pointerDown: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].isDown;
+        return this._pointerData[pointerId].isDown;
 
     },
 
     /**
-    * If the Pointer is up this returns true. Please note that it only checks if the Pointer is up, not if it's up over any specific Sprite.
+    * If the Pointer is up this returns true.
+    * This *only* checks if the Pointer is up, not if it's up over any specific Sprite.
     *
     * @method Phaser.InputHandler#pointerUp
-    * @param {number} pointer - The index of the pointer to check. You can get this from Phaser.Pointer.id.
+    * @param {integer} [pointerId=0]
     * @return {boolean} - True if the given pointer is up, otherwise false.
     */
-    pointerUp: function (pointer) {
+    pointerUp: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].isUp;
+        return this._pointerData[pointerId].isUp;
 
     },
 
@@ -536,28 +538,29 @@ Phaser.InputHandler.prototype = {
     * A timestamp representing when the Pointer first touched the touchscreen.
     *
     * @method Phaser.InputHandler#pointerTimeDown
-    * @param {number} pointer - The index of the pointer to check. You can get this from Phaser.Pointer.id.
+    * @param {integer} [pointerId=(check all)]
     * @return {number}
     */
-    pointerTimeDown: function (pointer) {
+    pointerTimeDown: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].timeDown;
+        return this._pointerData[pointerId].timeDown;
 
     },
 
     /**
     * A timestamp representing when the Pointer left the touchscreen.
+    *
     * @method Phaser.InputHandler#pointerTimeUp
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {number}
     */
-    pointerTimeUp: function (pointer) {
+    pointerTimeUp: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].timeUp;
+        return this._pointerData[pointerId].timeUp;
 
     },
 
@@ -565,102 +568,106 @@ Phaser.InputHandler.prototype = {
     * Is the Pointer over this Sprite?
     *
     * @method Phaser.InputHandler#pointerOver
-    * @param {number} [index] - The ID number of a Pointer to check. If you don't provide a number it will check all Pointers.
+    * @param {integer} [pointerId=(check all)] The ID number of a Pointer to check. If you don't provide a number it will check all Pointers.
     * @return {boolean} - True if the given pointer (if a index was given, or any pointer if not) is over this object.
     */
-    pointerOver: function (index) {
+    pointerOver: function (pointerId) {
 
-        if (this.enabled)
+        if (!this.enabled)
         {
-            if (index === undefined)
-            {
-                for (var i = 0; i < 10; i++)
-                {
-                    if (this._pointerData[i].isOver)
-                    {
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                return this._pointerData[index].isOver;
-            }
+            return false;
         }
 
-        return false;
+        if (pointerId === undefined)
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                if (this._pointerData[i].isOver)
+                {
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            return this._pointerData[pointerId].isOver;
+        }
 
     },
 
     /**
     * Is the Pointer outside of this Sprite?
+    *
     * @method Phaser.InputHandler#pointerOut
-    * @param {number} [index] - The ID number of a Pointer to check. If you don't provide a number it will check all Pointers.
+    * @param {integer} [pointerId=(check all)] The ID number of a Pointer to check. If you don't provide a number it will check all Pointers.
     * @return {boolean} True if the given pointer (if a index was given, or any pointer if not) is out of this object.
     */
-    pointerOut: function (index) {
+    pointerOut: function (pointerId) {
 
-        if (this.enabled)
+        if (!this.enabled)
         {
-            if (index === undefined)
-            {
-                for (var i = 0; i < 10; i++)
-                {
-                    if (this._pointerData[i].isOut)
-                    {
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                return this._pointerData[index].isOut;
-            }
+            return false;
         }
 
-        return false;
+        if (pointerId === undefined)
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                if (this._pointerData[i].isOut)
+                {
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            return this._pointerData[pointerId].isOut;
+        }
 
     },
 
     /**
     * A timestamp representing when the Pointer first touched the touchscreen.
+    *
     * @method Phaser.InputHandler#pointerTimeOver
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {number}
     */
-    pointerTimeOver: function (pointer) {
+    pointerTimeOver: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].timeOver;
+        return this._pointerData[pointerId].timeOver;
 
     },
 
     /**
     * A timestamp representing when the Pointer left the touchscreen.
+    *
     * @method Phaser.InputHandler#pointerTimeOut
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {number}
     */
-    pointerTimeOut: function (pointer) {
+    pointerTimeOut: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].timeOut;
+        return this._pointerData[pointerId].timeOut;
 
     },
 
     /**
     * Is this sprite being dragged by the mouse or not?
+    *
     * @method Phaser.InputHandler#pointerDragged
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {boolean} True if the pointer is dragging an object, otherwise false.
     */
-    pointerDragged: function (pointer) {
+    pointerDragged: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        return this._pointerData[pointer].isDragged;
+        return this._pointerData[pointerId].isDragged;
 
     },
 
@@ -683,7 +690,10 @@ Phaser.InputHandler.prototype = {
         //  Need to pass it a temp point, in case we need it again for the pixel check
         if (this.game.input.hitTest(this.sprite, pointer, this._tempPoint))
         {
-            if (fastTest === undefined) { fastTest = false; }
+            if (fastTest === undefined)
+            {
+                fastTest = false;
+            }
 
             if (!fastTest && this.pixelPerfectClick)
             {
@@ -718,7 +728,10 @@ Phaser.InputHandler.prototype = {
         //  Need to pass it a temp point, in case we need it again for the pixel check
         if (this.game.input.hitTest(this.sprite, pointer, this._tempPoint))
         {
-            if (fastTest === undefined) { fastTest = false; }
+            if (fastTest === undefined)
+            {
+                fastTest = false;
+            }
 
             if (!fastTest && this.pixelPerfectOver)
             {
@@ -737,6 +750,7 @@ Phaser.InputHandler.prototype = {
     /**
     * Runs a pixel perfect check against the given x/y coordinates of the Sprite this InputHandler is bound to.
     * It compares the alpha value of the pixel and if >= InputHandler.pixelPerfectAlpha it returns true.
+    *
     * @method Phaser.InputHandler#checkPixel
     * @param {number} x - The x coordinate to check.
     * @param {number} y - The y coordinate to check.
@@ -858,15 +872,17 @@ Phaser.InputHandler.prototype = {
             return;
         }
 
-        if (this._pointerData[pointer.id].isOver === false || pointer.dirty)
-        {
-            this._pointerData[pointer.id].isOver = true;
-            this._pointerData[pointer.id].isOut = false;
-            this._pointerData[pointer.id].timeOver = this.game.time.time;
-            this._pointerData[pointer.id].x = pointer.x - this.sprite.x;
-            this._pointerData[pointer.id].y = pointer.y - this.sprite.y;
+        var data = this._pointerData[pointer.id];
 
-            if (this.useHandCursor && this._pointerData[pointer.id].isDragged === false)
+        if (data.isOver === false || pointer.dirty)
+        {
+            data.isOver = true;
+            data.isOut = false;
+            data.timeOver = this.game.time.time;
+            data.x = pointer.x - this.sprite.x;
+            data.y = pointer.y - this.sprite.y;
+
+            if (this.useHandCursor && data.isDragged === false)
             {
                 this.game.canvas.style.cursor = "pointer";
                 this._setHandCursor = true;
@@ -895,11 +911,13 @@ Phaser.InputHandler.prototype = {
             return;
         }
 
-        this._pointerData[pointer.id].isOver = false;
-        this._pointerData[pointer.id].isOut = true;
-        this._pointerData[pointer.id].timeOut = this.game.time.time;
+        var data = this._pointerData[pointer.id];
 
-        if (this.useHandCursor && this._pointerData[pointer.id].isDragged === false)
+        data.isOver = false;
+        data.isOut = true;
+        data.timeOut = this.game.time.time;
+
+        if (this.useHandCursor && data.isDragged === false)
         {
             this.game.canvas.style.cursor = "default";
             this._setHandCursor = false;
@@ -927,16 +945,18 @@ Phaser.InputHandler.prototype = {
             return;
         }
 
-        if (!this._pointerData[pointer.id].isDown && this._pointerData[pointer.id].isOver)
+        var data = this._pointerData[pointer.id];
+
+        if (!data.isDown && data.isOver)
         {
             if (this.pixelPerfectClick && !this.checkPixel(null, null, pointer))
             {
                 return;
             }
 
-            this._pointerData[pointer.id].isDown = true;
-            this._pointerData[pointer.id].isUp = false;
-            this._pointerData[pointer.id].timeDown = this.game.time.time;
+            data.isDown = true;
+            data.isUp = false;
+            data.timeDown = this.game.time.time;
 
             if (this.sprite && this.sprite.events)
             {
@@ -977,40 +997,39 @@ Phaser.InputHandler.prototype = {
             return;
         }
 
+        var data = this._pointerData[pointer.id];
+
         //  If was previously touched by this Pointer, check if still is AND still over this item
-        if (this._pointerData[pointer.id].isDown && pointer.isUp)
+        if (data.isDown && pointer.isUp)
         {
-            this._pointerData[pointer.id].isDown = false;
-            this._pointerData[pointer.id].isUp = true;
-            this._pointerData[pointer.id].timeUp = this.game.time.time;
-            this._pointerData[pointer.id].downDuration = this._pointerData[pointer.id].timeUp - this._pointerData[pointer.id].timeDown;
+            data.isDown = false;
+            data.isUp = true;
+            data.timeUp = this.game.time.time;
+            data.downDuration = data.timeUp - data.timeDown;
 
             //  Only release the InputUp signal if the pointer is still over this sprite
-            if (this.checkPointerOver(pointer))
+            var isOver = this.checkPointerOver(pointer);
+
+            if (this.sprite && this.sprite.events)
             {
-                //  Release the inputUp signal and provide optional parameter if pointer is still over the sprite or not
-                if (this.sprite && this.sprite.events)
+                this.sprite.events.onInputUp$dispatch(this.sprite, pointer, isOver);
+
+                //  The onInputUp event may have changed the sprite so that checkPointerOver is no longer true, so update it.
+                if (isOver)
                 {
-                    this.sprite.events.onInputUp$dispatch(this.sprite, pointer, true);
+                    isOver = this.checkPointerOver(pointer);
                 }
             }
-            else
-            {
-                //  Release the inputUp signal and provide optional parameter if pointer is still over the sprite or not
-                if (this.sprite && this.sprite.events)
-                {
-                    this.sprite.events.onInputUp$dispatch(this.sprite, pointer, false);
-                }
+            
+            data.isOver = isOver;
 
-                //  Pointer outside the sprite? Reset the cursor
-                if (this.useHandCursor)
-                {
-                    this.game.canvas.style.cursor = "default";
-                    this._setHandCursor = false;
-                }
+            if (!isOver && this.useHandCursor)
+            {
+                this.game.canvas.style.cursor = "default";
+                this._setHandCursor = false;
             }
 
-            //  It's possible the onInputUp event created a new Sprite that is on-top of this one, so we ought to force a Pointer update
+            //  It's possible the onInputUp event created a new Sprite that is on-top of this one, so force a Pointer update
             pointer.dirty = true;
 
             //  Stop drag
@@ -1106,81 +1125,86 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Returns true if the pointer has entered the Sprite within the specified delay time (defaults to 500ms, half a second)
+    *
     * @method Phaser.InputHandler#justOver
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @param {number} delay - The time below which the pointer is considered as just over.
     * @return {boolean}
     */
-    justOver: function (pointer, delay) {
+    justOver: function (pointerId, delay) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
         delay = delay || 500;
 
-        return (this._pointerData[pointer].isOver && this.overDuration(pointer) < delay);
+        return (this._pointerData[pointerId].isOver && this.overDuration(pointerId) < delay);
 
     },
 
     /**
     * Returns true if the pointer has left the Sprite within the specified delay time (defaults to 500ms, half a second)
+    *
     * @method Phaser.InputHandler#justOut
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @param {number} delay - The time below which the pointer is considered as just out.
     * @return {boolean}
     */
-    justOut: function (pointer, delay) {
+    justOut: function (pointerId, delay) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
         delay = delay || 500;
 
-        return (this._pointerData[pointer].isOut && (this.game.time.time - this._pointerData[pointer].timeOut < delay));
+        return (this._pointerData[pointerId].isOut && (this.game.time.time - this._pointerData[pointerId].timeOut < delay));
 
     },
 
     /**
     * Returns true if the pointer has touched or clicked on the Sprite within the specified delay time (defaults to 500ms, half a second)
+    *
     * @method Phaser.InputHandler#justPressed
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @param {number} delay - The time below which the pointer is considered as just over.
     * @return {boolean}
     */
-    justPressed: function (pointer, delay) {
+    justPressed: function (pointerId, delay) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
         delay = delay || 500;
 
-        return (this._pointerData[pointer].isDown && this.downDuration(pointer) < delay);
+        return (this._pointerData[pointerId].isDown && this.downDuration(pointerId) < delay);
 
     },
 
     /**
     * Returns true if the pointer was touching this Sprite, but has been released within the specified delay time (defaults to 500ms, half a second)
+    *
     * @method Phaser.InputHandler#justReleased
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @param {number} delay - The time below which the pointer is considered as just out.
     * @return {boolean}
     */
-    justReleased: function (pointer, delay) {
+    justReleased: function (pointerId, delay) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
         delay = delay || 500;
 
-        return (this._pointerData[pointer].isUp && (this.game.time.time - this._pointerData[pointer].timeUp < delay));
+        return (this._pointerData[pointerId].isUp && (this.game.time.time - this._pointerData[pointerId].timeUp < delay));
 
     },
 
     /**
     * If the pointer is currently over this Sprite this returns how long it has been there for in milliseconds.
+    *
     * @method Phaser.InputHandler#overDuration
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {number} The number of milliseconds the pointer has been over the Sprite, or -1 if not over.
     */
-    overDuration: function (pointer) {
+    overDuration: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        if (this._pointerData[pointer].isOver)
+        if (this._pointerData[pointerId].isOver)
         {
-            return this.game.time.time - this._pointerData[pointer].timeOver;
+            return this.game.time.time - this._pointerData[pointerId].timeOver;
         }
 
         return -1;
@@ -1189,17 +1213,18 @@ Phaser.InputHandler.prototype = {
 
     /**
     * If the pointer is currently over this Sprite this returns how long it has been there for in milliseconds.
+    *
     * @method Phaser.InputHandler#downDuration
-    * @param {Phaser.Pointer} pointer
+    * @param {integer} [pointerId=0]
     * @return {number} The number of milliseconds the pointer has been pressed down on the Sprite, or -1 if not over.
     */
-    downDuration: function (pointer) {
+    downDuration: function (pointerId) {
 
-        pointer = pointer || 0;
+        pointerId = pointerId || 0;
 
-        if (this._pointerData[pointer].isDown)
+        if (this._pointerData[pointerId].isDown)
         {
-            return this.game.time.time - this._pointerData[pointer].timeDown;
+            return this.game.time.time - this._pointerData[pointerId].timeDown;
         }
 
         return -1;
@@ -1255,7 +1280,9 @@ Phaser.InputHandler.prototype = {
     },
 
     /**
-    * Stops this sprite from being able to be dragged. If it is currently the target of an active drag it will be stopped immediately. Also disables any set callbacks.
+    * Stops this sprite from being able to be dragged.
+    * If it is currently the target of an active drag it will be stopped immediately; also disables any set callbacks.
+    *
     * @method Phaser.InputHandler#disableDrag
     */
     disableDrag: function () {
@@ -1276,6 +1303,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Called by Pointer when drag starts on this Sprite. Should not usually be called directly.
+    *
     * @method Phaser.InputHandler#startDrag
     * @param {Phaser.Pointer} pointer
     */
@@ -1328,6 +1356,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Warning: EXPERIMENTAL
+    *
     * @method Phaser.InputHandler#globalToLocalX
     * @param {number} x
     */
@@ -1345,6 +1374,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Warning: EXPERIMENTAL
+    *
     * @method Phaser.InputHandler#globalToLocalY
     * @param {number} y
     */
@@ -1362,6 +1392,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Called by Pointer when drag is stopped on this Sprite. Should not usually be called directly.
+    *
     * @method Phaser.InputHandler#stopDrag
     * @param {Phaser.Pointer} pointer
     */
@@ -1397,6 +1428,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Restricts this sprite to drag movement only on the given axis. Note: If both are set to false the sprite will never move!
+    *
     * @method Phaser.InputHandler#setDragLock
     * @param {boolean} [allowHorizontal=true] - To enable the sprite to be dragged horizontally set to true, otherwise false.
     * @param {boolean} [allowVertical=true] - To enable the sprite to be dragged vertically set to true, otherwise false.
@@ -1414,6 +1446,7 @@ Phaser.InputHandler.prototype = {
     /**
     * Make this Sprite snap to the given grid either during drag or when it's released.
     * For example 16x16 as the snapX and snapY would make the sprite snap to every 16 pixels.
+    *
     * @method Phaser.InputHandler#enableSnap
     * @param {number} snapX - The width of the grid cell to snap to.
     * @param {number} snapY - The height of the grid cell to snap to.
@@ -1440,6 +1473,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Stops the sprite from snapping to a grid during drag or release.
+    *
     * @method Phaser.InputHandler#disableSnap
     */
     disableSnap: function () {
@@ -1452,6 +1486,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Bounds Rect check for the sprite drag
+    *
     * @method Phaser.InputHandler#checkBoundsRect
     */
     checkBoundsRect: function () {
@@ -1501,6 +1536,7 @@ Phaser.InputHandler.prototype = {
 
     /**
     * Parent Sprite Bounds check for the sprite drag.
+    *
     * @method Phaser.InputHandler#checkBoundsSprite
     */
     checkBoundsSprite: function () {
